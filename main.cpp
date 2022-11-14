@@ -3,9 +3,7 @@
 #include <fstream>
 #include <iomanip>
 
-int main(){
-    std::ifstream fileReader("files/program2.txt");
-    std::ofstream outputFile("output/output1.txt");
+void firstPass(std::ifstream& fileReader, std::ofstream& outputFile){
     std::string currentLine;
     unsigned int addrPointer = 0;
     std::smatch match;
@@ -23,7 +21,7 @@ int main(){
                 if (std::regex_search(lineWithoutComments, match, std::regex("\\S*(?=:)"))) {
                     labelAddrMap[match.str(0)] = addrPointer;
                     if (outputFile.is_open()){
-                        outputFile << match.str() << "   0x" << std::setfill('0') << std::setw(8) << std::hex << addrPointer << "    ";
+                        outputFile << match.str(0) << "   0x" << std::setfill('0') << std::setw(8) << std::hex << addrPointer << "    ";
                     }
                     //Looking if there is no code after the label
                     if (!std::regex_search(lineWithoutComments,std::regex(":[^#]*[^#\\s]#*"))) {
@@ -34,6 +32,14 @@ int main(){
             }
         }
     }
+}
+
+int main(int argc, char* argv[]){
+    std::ifstream fileReader(argv[1]);
+    std::ofstream outputFile("output/output1.txt");
+
+    firstPass(fileReader, outputFile);
+
     fileReader.close();
     outputFile.close();
     return 0;
