@@ -2,6 +2,9 @@
 #include <regex>
 #include <fstream>
 #include <iomanip>
+#include <map>
+
+#include "definitions.hpp"
 
 void firstPass(std::ifstream& fileReader, std::ofstream& outputFile){
     std::string currentLine;
@@ -34,11 +37,60 @@ void firstPass(std::ifstream& fileReader, std::ofstream& outputFile){
     }
 }
 
+// --------------------------------------------------------
+
+uint32_t binInstruction(const std::string& str_instruction){
+    // TODO ensure that str has the correct format
+    std::string mnemonic = str_instruction.substr(0, str_instruction.find_first_of(" ", 0));
+
+    // find codes and layout for instruction
+    const auto result = instr_codes.find(mnemonic);
+    if (result == instr_codes.end())
+    {
+        // Instruction is not supported!
+        // TODO error handling
+        return 0u;
+    }
+    InstructionCodes instruction_codes = result->second;
+
+    // 1. op-code - first (left) 6 bits
+    uint32_t binary_instr = 0x00000000;
+    binary_instr |= instruction_codes.op_code << 26;
+
+    // 2. TODO rest ....
+    switch (instruction_codes.format)
+    {
+    case INSTR_TYPE_R:
+        break;
+
+    case INSTR_TYPE_I:
+        break;
+
+    case INSTR_TYPE_J:
+        break;
+
+    case INSTR_TYPE_NULL:
+    default:
+        binary_instr = 0u;
+        break;
+    }
+
+    return binary_instr;
+}
+
+// --------------------------------------------------------
+
 int main(int argc, char* argv[]){
     std::ifstream fileReader(argv[1]);
+    // TODO create folder if neccesarry?
     std::ofstream outputFile("output/output1.txt");
 
     firstPass(fileReader, outputFile);
+
+    // TODO just for debug
+    std::string test_instruction = "lw $t4, 4($t5)";
+    uint32_t binary_instruction = binInstruction(test_instruction);
+    printf("0x%08X \n", binary_instruction);
 
     fileReader.close();
     outputFile.close();
