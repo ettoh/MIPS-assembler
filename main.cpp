@@ -8,11 +8,10 @@
 
 #include "definitions.hpp"
 
-void firstPass(std::ifstream& fileReader, std::ofstream& outputFile){
+void firstPass(std::ifstream& fileReader, std::ofstream& outputFile, std::map<std::string, unsigned int>& labelAddrMap){
     std::string currentLine;
     unsigned int addrPointer = 0;
     std::smatch match;
-    std::map<std::string, unsigned int> labelAddrMap;
 
     if (outputFile.is_open()) outputFile << "Symbols\n";
     while(getline(fileReader,currentLine)) {
@@ -156,18 +155,86 @@ uint32_t binInstruction(const std::vector<std::string>& instruction_parts){
 
 // --------------------------------------------------------
 
+void secondPass(std::ifstream& fileReader, std::ofstream& outputFile, std::map<std::string, unsigned int>& labelAddrMap){
+    fileReader.clear();
+    fileReader.seekg(0);
+    std::string currentLine;
+    unsigned int addrPointer = 0;
+    std::smatch match;
+
+    if (outputFile.is_open()) outputFile << "Symbols\n";
+    while(getline(fileReader,currentLine)) {
+        bool labelSingle = false;
+        //Looking for lines with codes
+        if (std::regex_search(currentLine, std::regex(R"(^\s*[^\s#]+\s*#*)"))){
+            //Looking for code without comments (we keep everything before a #)
+            if (std::regex_search(currentLine, match, std::regex("[^#]*"))) {
+                std::string lineWithoutComments = match.str(0);
+                //Looking for a label name
+                if (std::regex_search(lineWithoutComments, match, std::regex(R"(\S*:)"))) {
+                    //Looking if there is no code after the label
+                    if (!std::regex_search(lineWithoutComments,std::regex(":[^#]*[^#\\s]#*"))) {
+                        labelSingle = true;
+                    }
+                    lineWithoutComments = std::regex_replace(lineWithoutComments, std::regex(R"(\S*:)"), "");
+                }
+                if (std::regex_search(lineWithoutComments, match, std::regex(R"(^\s*(\S+)\s*$)"))){
+                    std::vector<std::string> result = {match.str(1)};
+                    for (const std::string& i: result) std::cout << i << ' ';
+                    std::cout << std::endl;
+                }
+                else if (std::regex_search(lineWithoutComments, match, std::regex(R"(^\s*(\S+)\s+(\S+)\s*$)"))){
+                    if (match.str(1) == "j") {
+                        std::vector<std::string> result = {match.str(1), std::to_string(labelAddrMap[match.str(2)])};
+                        for (const std::string& i: result) std::cout << i << ' ';
+                        std::cout << std::endl;
+                    } else {
+                        std::vector<std::string> result = {match.str(1), match.str(2)};
+                        for (const std::string& i: result) std::cout << i << ' ';
+                        std::cout << std::endl;
+                    }
+                }
+                else if (std::regex_search(lineWithoutComments, match, std::regex(R"(^\s*(\S+)\s+(\S+),\s*(\S+)\s*$)"))){
+                    std::vector<std::string> result = {match.str(1), match.str(2), match.str(3)};
+                    for (const std::string& i: result) std::cout << i << ' ';
+                    std::cout << std::endl;
+                }
+                else if (std::regex_search(lineWithoutComments, match, std::regex(R"(^\s*(\S+)\s+(\S+),\s*(\S+),\s*(\S+)\s*$)"))){
+                    if (match.str(1) == "beq") {
+                        std::vector<std::string> result = {match.str(1), match.str(2), match.str(3), std::to_string(labelAddrMap[match.str(4)])};
+                        for (const std::string& i: result) std::cout << i << ' ';
+                        std::cout << std::endl;
+                    } else {
+                        std::vector<std::string> result = {match.str(1), match.str(2), match.str(3), match.str(4)};
+                        for (const std::string& i: result) std::cout << i << ' ';
+                        std::cout << std::endl;
+                    }
+                }
+                else {
+                    std::cout << "Error, no match found for : " << lineWithoutComments << std::endl;
+                }
+                if (!labelSingle) addrPointer += 4;
+            }
+        }
+    }
+}
+
+// --------------------------------------------------------
+
 int main(int argc, char* argv[]){
     std::ifstream fileReader(argv[1]);
     // TODO create folder if neccesarry?
-    std::ofstream outputFile("output/output1.txt");
+    std::ofstream outputFile("output1.txt");
+    std::map<std::string, unsigned int> labelAddrMap;
 
-    firstPass(fileReader, outputFile);
+    firstPass(fileReader, outputFile, labelAddrMap);
 
     // TODO just for debug
     std::vector<std::string> test_instr = {"lw", "$t4", "$t5", "4"};  
     uint32_t binary_instruction = binInstruction(test_instr);
     printf("0x%08X \n", binary_instruction);
 
+    secondPass(fileReader, outputFile, labelAddrMap);
     fileReader.close();
     outputFile.close();
     return 0;
