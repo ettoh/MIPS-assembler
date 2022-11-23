@@ -3,6 +3,8 @@
 #include <fstream>
 #include <iomanip>
 #include <map>
+#include <sstream>
+#include <vector>
 
 #include "definitions.hpp"
 
@@ -39,14 +41,48 @@ void firstPass(std::ifstream& fileReader, std::ofstream& outputFile){
 
 // --------------------------------------------------------
 
-uint32_t binInstruction(const std::string& str_instruction){
-    // TODO ensure that str has the correct format
-    std::string mnemonic = str_instruction.substr(0, str_instruction.find_first_of(" ", 0));
+uint32_t regCode(const std::string& s){
+    if(std::regex_match(s, std::regex("[$](zero|\d{2}|[a-z]{1}\d{1}|[a-z]{2})"))){
+        // TODO error handling
+        // register string invalid
+        return 0u;
+    }
+
+    uint32_t register_number = 0;
+    if(s[1] >= 48 && s[1] <= 57) { // there is a number after $ -> no abbreviations
+        register_number = stoi(s.substr(1, s.length()-1));
+        if(register_number < 0 || register_number > 31){
+            // TODO error handling
+            // register out of range
+            return 0u;
+        }
+        return register_number;
+    }
+
+    // register abbreviations
+    const auto result = REGISTER_ABRV.find(s);
+    if (result == REGISTER_ABRV.end())
+    {
+        // register abbreviation is not supported!
+        // TODO error handling
+        return 0u;
+    }
+
+    return result->second;
+}
+
+// --------------------------------------------------------
+
+uint32_t binInstruction(const std::vector<std::string>& instruction_parts){
+    size_t argument_cnt = instruction_parts.size();
+    if(argument_cnt == 0){
+        // TODO error handling
+        return 0u; 
+    }
 
     // find codes and layout for instruction
-    const auto result = instr_codes.find(mnemonic);
-    if (result == instr_codes.end())
-    {
+    const auto result = INSTR_CODES.find(instruction_parts[0]);
+    if (result == INSTR_CODES.end()) {
         // Instruction is not supported!
         // TODO error handling
         return 0u;
@@ -57,16 +93,56 @@ uint32_t binInstruction(const std::string& str_instruction){
     uint32_t binary_instr = 0x00000000;
     binary_instr |= instruction_codes.op_code << 26;
 
-    // 2. TODO rest ....
-    switch (instruction_codes.format)
-    {
+    // 2. TODO rest .... 
+    switch (instruction_codes.format) {
     case INSTR_TYPE_R:
+        if(argument_cnt != 4){
+            // TODO error handling
+            // invalid instruction format
+            return 0u;
+        }
+    
+        binary_instr |= regCode(instruction_parts[2]) << 21; // rs        
+        binary_instr |= regCode(instruction_parts[3]) << 16; // rt        
+        binary_instr |= regCode(instruction_parts[1]) << 11; // rd        
+        binary_instr |= instruction_codes.function; // func. code
         break;
 
+    case INSTR_TYPE_R_SHIFT:
+        if(argument_cnt != 4){
+            // TODO error handling
+            // invalid instruction format
+            return 0u;
+        }
+
+        binary_instr |= regCode(instruction_parts[2]) << 16; // rt        
+        binary_instr |= regCode(instruction_parts[1]) << 11; // rd        
+        binary_instr |= stoi(instruction_parts[3]) << 6; // sh        
+        binary_instr |= instruction_codes.function; // func. code
+        break;
+
+
     case INSTR_TYPE_I:
+        if(argument_cnt != 3 && argument_cnt != 4){
+            // TODO error handling
+            // invalid instruction format
+            return 0u;
+        }
+
+        // format: {instr, rt, rs, imm} or {instr, rt, rs, offset}
+        binary_instr |= regCode(instruction_parts[2]) << 21; // rs        
+        binary_instr |= regCode(instruction_parts[1]) << 16; // rt 
+        binary_instr |= stoi(instruction_parts[3]); // imm or offset
         break;
 
     case INSTR_TYPE_J:
+        if(argument_cnt != 2){
+            // TODO error handling
+            // invalid instruction format
+            return 0u;
+        }
+
+        binary_instr |= stoi(instruction_parts[1]);
         break;
 
     case INSTR_TYPE_NULL:
@@ -88,8 +164,8 @@ int main(int argc, char* argv[]){
     firstPass(fileReader, outputFile);
 
     // TODO just for debug
-    std::string test_instruction = "lw $t4, 4($t5)";
-    uint32_t binary_instruction = binInstruction(test_instruction);
+    std::vector<std::string> test_instr = {"lw", "$t4", "$t5", "4"};  
+    uint32_t binary_instruction = binInstruction(test_instr);
     printf("0x%08X \n", binary_instruction);
 
     fileReader.close();
