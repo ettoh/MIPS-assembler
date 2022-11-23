@@ -165,6 +165,7 @@ void secondPass(std::ifstream& fileReader, std::ofstream& outputFile, std::map<s
     if (outputFile.is_open()) outputFile << "Symbols\n";
     while(getline(fileReader,currentLine)) {
         bool labelSingle = false;
+        std::vector<std::string> result = {};
         //Looking for lines with codes
         if (std::regex_search(currentLine, std::regex(R"(^\s*[^\s#]+\s*#*)"))){
             //Looking for code without comments (we keep everything before a #)
@@ -179,33 +180,33 @@ void secondPass(std::ifstream& fileReader, std::ofstream& outputFile, std::map<s
                     lineWithoutComments = std::regex_replace(lineWithoutComments, std::regex(R"(\S*:)"), "");
                 }
                 if (std::regex_search(lineWithoutComments, match, std::regex(R"(^\s*(\S+)\s*$)"))){
-                    std::vector<std::string> result = {match.str(1)};
+                    result = {match.str(1)};
                     for (const std::string& i: result) std::cout << i << ' ';
                     std::cout << std::endl;
                 }
                 else if (std::regex_search(lineWithoutComments, match, std::regex(R"(^\s*(\S+)\s+(\S+)\s*$)"))){
                     if (match.str(1) == "j") {
-                        std::vector<std::string> result = {match.str(1), std::to_string(labelAddrMap[match.str(2)])};
+                        result = {match.str(1), std::to_string(labelAddrMap[match.str(2)])};
                         for (const std::string& i: result) std::cout << i << ' ';
                         std::cout << std::endl;
                     } else {
-                        std::vector<std::string> result = {match.str(1), match.str(2)};
+                        result = {match.str(1), match.str(2)};
                         for (const std::string& i: result) std::cout << i << ' ';
                         std::cout << std::endl;
                     }
                 }
-                else if (std::regex_search(lineWithoutComments, match, std::regex(R"(^\s*(\S+)\s+(\S+),\s*(\S+)\s*$)"))){
-                    std::vector<std::string> result = {match.str(1), match.str(2), match.str(3)};
+                else if (std::regex_search(lineWithoutComments, match, std::regex(R"(^\s*(\S+)\s+(\S+),\s*(\d+)\((\S+)\)\s*$)"))){
+                    result = {match.str(1), match.str(2), match.str(4), match.str(3)};
                     for (const std::string& i: result) std::cout << i << ' ';
                     std::cout << std::endl;
                 }
                 else if (std::regex_search(lineWithoutComments, match, std::regex(R"(^\s*(\S+)\s+(\S+),\s*(\S+),\s*(\S+)\s*$)"))){
                     if (match.str(1) == "beq") {
-                        std::vector<std::string> result = {match.str(1), match.str(2), match.str(3), std::to_string(labelAddrMap[match.str(4)])};
+                        result = {match.str(1), match.str(2), match.str(3), std::to_string(labelAddrMap[match.str(4)])};
                         for (const std::string& i: result) std::cout << i << ' ';
                         std::cout << std::endl;
                     } else {
-                        std::vector<std::string> result = {match.str(1), match.str(2), match.str(3), match.str(4)};
+                        result = {match.str(1), match.str(2), match.str(3), match.str(4)};
                         for (const std::string& i: result) std::cout << i << ' ';
                         std::cout << std::endl;
                     }
@@ -214,6 +215,11 @@ void secondPass(std::ifstream& fileReader, std::ofstream& outputFile, std::map<s
                     std::cout << "Error, no match found for : " << lineWithoutComments << std::endl;
                 }
                 if (!labelSingle) addrPointer += 4;
+
+                if(result.size() != 0){
+                    uint32_t binary_instruction = binInstruction(result);
+                    printf("0x%08X \n", binary_instruction);
+                }                
             }
         }
     }
@@ -228,12 +234,6 @@ int main(int argc, char* argv[]){
     std::map<std::string, unsigned int> labelAddrMap;
 
     firstPass(fileReader, outputFile, labelAddrMap);
-
-    // TODO just for debug
-    std::vector<std::string> test_instr = {"lw", "$t4", "$t5", "4"};  
-    uint32_t binary_instruction = binInstruction(test_instr);
-    printf("0x%08X \n", binary_instruction);
-
     secondPass(fileReader, outputFile, labelAddrMap);
     fileReader.close();
     outputFile.close();
