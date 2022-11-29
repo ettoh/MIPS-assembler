@@ -5,6 +5,7 @@
 #include <map>
 #include <sstream>
 #include <vector>
+#include <iomanip>
 
 #include "definitions.hpp"
 
@@ -162,7 +163,6 @@ void secondPass(std::ifstream& fileReader, std::ofstream& outputFile, std::map<s
     unsigned int addrPointer = 0;
     std::smatch match;
 
-    if (outputFile.is_open()) outputFile << "Symbols\n";
     while(getline(fileReader,currentLine)) {
         bool labelSingle = false;
         std::vector<std::string> result = {};
@@ -218,11 +218,14 @@ void secondPass(std::ifstream& fileReader, std::ofstream& outputFile, std::map<s
 
                 if(result.size() != 0){
                     uint32_t binary_instruction = binInstruction(result);
-                    printf("0x%08X \n", binary_instruction);
+                    outputFile << "0x";
+                    outputFile << std::hex << std::uppercase << std::setw(8) << std::setfill('0');
+                    outputFile << binary_instruction << "\n";
                 }                
             }
         }
     }
+    outputFile << std::endl;
 }
 
 // --------------------------------------------------------
@@ -230,12 +233,14 @@ void secondPass(std::ifstream& fileReader, std::ofstream& outputFile, std::map<s
 int main(int argc, char* argv[]){
     std::ifstream fileReader(argv[1]);
     // TODO create folder if neccesarry?
-    std::ofstream outputFile("output1.txt");
+    std::ofstream outputListing("output_listing.txt");
+    std::ofstream outputInstructions("out_intructions.txt");
     std::map<std::string, unsigned int> labelAddrMap;
 
-    firstPass(fileReader, outputFile, labelAddrMap);
-    secondPass(fileReader, outputFile, labelAddrMap);
+    firstPass(fileReader, outputListing, labelAddrMap);
+    secondPass(fileReader, outputInstructions, labelAddrMap);
     fileReader.close();
-    outputFile.close();
+    outputListing.close();
+    outputInstructions.close();
     return 0;
 }
