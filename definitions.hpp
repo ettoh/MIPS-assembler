@@ -17,7 +17,7 @@ struct InstructionCodes {
     uint32_t function = 0x00;
 };
 
-std::map<std::string, InstructionCodes> INSTR_CODES = {
+const std::map<std::string, InstructionCodes> INSTR_CODES = {
     {"add", {0x00, INSTR_TYPE_R, 0x20}},        // R, 0x20
     {"sub", {0x00, INSTR_TYPE_R, 0x22}},        // R, 0x22
     {"and", {0x00, INSTR_TYPE_R, 0x24}},        // R, 0x24
@@ -34,7 +34,7 @@ std::map<std::string, InstructionCodes> INSTR_CODES = {
     {"nop", {0x00, INSTR_TYPE_NULL, 0x00}}};
 
 // register abbreviations
-std::map<std::string, uint32_t> REGISTER_ABRV = {
+const std::map<std::string, uint32_t> REGISTER_ABRV = {
     {"$zero", 0}, {"$at", 1},  {"$v0", 2},  {"$v1", 3},  {"$a0", 4},
     {"$a1", 5},   {"$a2", 6},  {"$a3", 7},  {"$t0", 8},  {"$t1", 9},
     {"$t2", 10},  {"$t3", 11}, {"$t4", 12}, {"$t5", 13}, {"$t6", 14},

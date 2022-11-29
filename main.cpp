@@ -15,7 +15,6 @@ void firstPass(std::ifstream& fileReader,
     unsigned int addrPointer = 0;
     std::smatch match;
 
-    if (outputFile.is_open()) outputFile << "Symbols\n";
     while (getline(fileReader, currentLine)) {
         bool labelSingle = false;
         // Looking for lines with codes
@@ -27,11 +26,7 @@ void firstPass(std::ifstream& fileReader,
                 if (std::regex_search(
                         lineWithoutComments, match, std::regex("\\S*(?=:)"))) {
                     labelAddrMap[match.str(0)] = addrPointer;
-                    if (outputFile.is_open()) {
-                        outputFile << match.str(0) << "   0x"
-                                   << std::setfill('0') << std::setw(8)
-                                   << std::hex << addrPointer << "    ";
-                    }
+
                     // Looking if there is no code after the label
                     if (!std::regex_search(lineWithoutComments,
                                            std::regex(":[^#]*[^#\\s]#*"))) {
@@ -162,12 +157,13 @@ uint32_t binInstruction(const std::vector<std::string>& instruction_parts) {
 // --------------------------------------------------------
 
 void secondPass(std::ifstream& fileReader,
-                std::ofstream& outputFile,
+                std::ofstream& outputListing,
+                std::ofstream& outputInstructions,
                 std::map<std::string, unsigned int>& labelAddrMap) {
     fileReader.clear();
     fileReader.seekg(0);
     std::string currentLine;
-    unsigned int addrPointer = 0;
+    unsigned int instruction_count = 0;
     std::smatch match;
 
     while (getline(fileReader, currentLine)) {
@@ -193,8 +189,6 @@ void secondPass(std::ifstream& fileReader,
                                       match,
                                       std::regex(R"(^\s*(\S+)\s*$)"))) {
                     result = {match.str(1)};
-                    for (const std::string& i : result) std::cout << i << ' ';
-                    std::cout << std::endl;
                 } else if (std::regex_search(
                                lineWithoutComments,
                                match,
@@ -202,14 +196,8 @@ void secondPass(std::ifstream& fileReader,
                     if (match.str(1) == "j") {
                         result = {match.str(1),
                                   std::to_string(labelAddrMap[match.str(2)])};
-                        for (const std::string& i : result)
-                            std::cout << i << ' ';
-                        std::cout << std::endl;
                     } else {
                         result = {match.str(1), match.str(2)};
-                        for (const std::string& i : result)
-                            std::cout << i << ' ';
-                        std::cout << std::endl;
                     }
                 } else if (
                     std::regex_search(
@@ -219,8 +207,6 @@ void secondPass(std::ifstream& fileReader,
                             R"(^\s*(\S+)\s+(\S+),\s*(\d+)\((\S+)\)\s*$)"))) {
                     result = {
                         match.str(1), match.str(2), match.str(4), match.str(3)};
-                    for (const std::string& i : result) std::cout << i << ' ';
-                    std::cout << std::endl;
                 } else if (
                     std::regex_search(
                         lineWithoutComments,
@@ -232,36 +218,46 @@ void secondPass(std::ifstream& fileReader,
                                   match.str(2),
                                   match.str(3),
                                   std::to_string(labelAddrMap[match.str(4)])};
-                        for (const std::string& i : result)
-                            std::cout << i << ' ';
-                        std::cout << std::endl;
                     } else {
                         result = {match.str(1),
                                   match.str(2),
                                   match.str(3),
                                   match.str(4)};
-                        for (const std::string& i : result)
-                            std::cout << i << ' ';
-                        std::cout << std::endl;
                     }
                 } else {
                     std::cout
                         << "Error, no match found for : " << lineWithoutComments
                         << std::endl;
                 }
-                if (!labelSingle) addrPointer += 4;
+                if (!labelSingle) instruction_count += 4;
 
                 if (result.size() != 0) {
                     uint32_t binary_instruction = binInstruction(result);
-                    outputFile << "0x";
-                    outputFile << std::hex << std::uppercase << std::setw(8)
-                               << std::setfill('0');
-                    outputFile << binary_instruction << "\n";
+
+                    // output listing
+                    std::ios hex_format(nullptr);
+                    outputListing << "0x";
+                    outputListing << std::hex << std::uppercase << std::setw(8)
+                                  << std::setfill('0');
+                    hex_format.copyfmt(outputListing);
+                    outputListing << instruction_count;
+                    outputListing << "    0x";
+                    outputListing.copyfmt(hex_format);
+                    outputListing << binary_instruction;
+                    outputListing << "    ";
+                    for (const auto& s : result) {
+                        outputListing << s << " ";
+                    }
+                    outputListing << "\n";
+
+                    // output instructions
+                    outputInstructions << "0x";
+                    outputInstructions.copyfmt(hex_format);
+                    outputInstructions << binary_instruction << "\n";
                 }
             }
         }
     }
-    outputFile << std::endl;
 }
 
 // --------------------------------------------------------
@@ -274,7 +270,7 @@ int main(int argc, char* argv[]) {
     std::map<std::string, unsigned int> labelAddrMap;
 
     firstPass(fileReader, outputListing, labelAddrMap);
-    secondPass(fileReader, outputInstructions, labelAddrMap);
+    secondPass(fileReader, outputListing, outputInstructions, labelAddrMap);
     fileReader.close();
     outputListing.close();
     outputInstructions.close();
