@@ -2,6 +2,7 @@
 #define MIPS_DEFINITIONS_H
 
 #include <map>
+#include <string>
 
 enum {
     INSTR_TYPE_R,

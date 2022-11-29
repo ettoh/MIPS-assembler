@@ -229,7 +229,6 @@ void secondPass(std::ifstream& fileReader,
                         << "Error, no match found for : " << lineWithoutComments
                         << std::endl;
                 }
-                if (!labelSingle) instruction_count += 4;
 
                 if (result.size() != 0) {
                     uint32_t binary_instruction = binInstruction(result);
@@ -255,8 +254,23 @@ void secondPass(std::ifstream& fileReader,
                     outputInstructions.copyfmt(hex_format);
                     outputInstructions << binary_instruction << "\n";
                 }
+
+                if (!labelSingle) instruction_count += 4;
             }
         }
+    }
+
+    // TODO order by value?
+    // output listing symbols
+    outputListing << "\nSymbols\n";
+    for (const auto& lbl : labelAddrMap) {
+        outputListing << std::left << std::setw(13) << std::setfill(' ');
+        outputListing << lbl.first << " ";
+        outputListing << "0x";
+        outputListing << std::hex << std::uppercase << std::setw(8)
+                      << std::setfill('0');
+        outputListing << lbl.second;
+        outputListing << "\n";
     }
 }
 
