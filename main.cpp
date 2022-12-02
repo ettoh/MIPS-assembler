@@ -248,7 +248,7 @@ void secondPass(std::ifstream& fileReader,
                     }
                 }
             }
-            if (!labelSingle) instruction_count += 4;
+            
         }
         if (result.size() != 0) {
             uint32_t binary_instruction = binInstruction(result, outputListing);
@@ -283,6 +283,7 @@ void secondPass(std::ifstream& fileReader,
             outputInstructions << "0x";
             outputInstructions.copyfmt(hex_format);
             outputInstructions << binary_instruction << "\n";
+            if (!labelSingle) instruction_count += 4;
         } else {
             if (!label.empty() || !comment.empty()) {
                 outputListing << "                            ";
@@ -298,6 +299,7 @@ void secondPass(std::ifstream& fileReader,
             }
             outputListing << "\n";
         }
+        
     }
 
     // output listing symbols
