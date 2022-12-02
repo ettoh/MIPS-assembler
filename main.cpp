@@ -10,7 +10,7 @@
 
 void firstPass(std::ifstream& fileReader,
                std::ofstream& outputFile,
-               std::map<std::string, unsigned int>& labelAddrMap) {
+               std::map<std::string, int>& labelAddrMap) {
     std::string currentLine;
     unsigned int addrPointer = 0;
     std::smatch match;
@@ -140,7 +140,8 @@ uint32_t binInstruction(const std::vector<std::string>& instruction_parts,
             // format: {instr, rt, rs, imm} or {instr, rt, rs, offset}
             binary_instr |= regCode(instruction_parts[2], errout) << 21;  // rs
             binary_instr |= regCode(instruction_parts[1], errout) << 16;  // rt
-            binary_instr |= stoi(instruction_parts[3]);  // imm or offset
+            binary_instr |=
+                stoi(instruction_parts[3]) & 0xFFFF;  // imm or offset
             break;
 
         case INSTR_TYPE_J:
@@ -168,11 +169,11 @@ uint32_t binInstruction(const std::vector<std::string>& instruction_parts,
 void secondPass(std::ifstream& fileReader,
                 std::ofstream& outputListing,
                 std::ofstream& outputInstructions,
-                std::map<std::string, unsigned int>& labelAddrMap) {
+                std::map<std::string, int>& labelAddrMap) {
     fileReader.clear();
     fileReader.seekg(0);
     std::string currentLine;
-    unsigned int instruction_count = 0;
+    int instruction_count = 0;
     std::smatch match;
 
     while (getline(fileReader, currentLine)) {
@@ -230,10 +231,15 @@ void secondPass(std::ifstream& fileReader,
                         std::regex(
                             R"(^\s*(\S+)\s+(\S+),\s*(\S+),\s*(\S+)\s*$)"))) {
                     if (match.str(1) == "beq") {
-                        result = {match.str(1),
-                                  match.str(2),
-                                  match.str(3),
-                                  std::to_string(labelAddrMap[match.str(4)])};
+                        result = {
+                            match.str(1),
+                            match.str(3),  // special order for beq and bne
+                            match.str(2),
+                            std::to_string((labelAddrMap[match.str(4)] -
+                                            instruction_count) /
+                                               4 +
+                                           1)};
+
                     } else {
                         result = {match.str(1),
                                   match.str(2),
@@ -261,7 +267,7 @@ void secondPass(std::ifstream& fileReader,
             } else {
                 outputListing << "    ";
                 outputListing << label;
-                for (int i = label.length(); i < 10; i++) {
+                for (size_t i = label.length(); i < 10; i++) {
                     outputListing << " ";
                 }
                 outputListing << "    ";
@@ -317,7 +323,7 @@ int main(int argc, char* argv[]) {
     std::ifstream fileReader(argv[1]);
     std::ofstream outputListing("output_listing.txt");
     std::ofstream outputInstructions("out_intructions.txt");
-    std::map<std::string, unsigned int> labelAddrMap;
+    std::map<std::string, int> labelAddrMap;
 
     firstPass(fileReader, outputListing, labelAddrMap);
     secondPass(fileReader, outputListing, outputInstructions, labelAddrMap);
