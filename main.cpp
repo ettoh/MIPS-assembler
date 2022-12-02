@@ -43,7 +43,7 @@ void firstPass(std::ifstream& fileReader,
 
 uint32_t regCode(const std::string& s, std::ofstream& errout) {
     if (!std::regex_match(
-            s, std::regex("[$]{1}(zero|[0-9]{2}|[a-z]{1}[0-9]{1}|[a-z]{2})"))) {
+            s, std::regex(R"([$](zero|[0-9]{2}|[a-z]\d|[a-z]{2}))"))) {
         errout << "Error: Register string invalid: " << s << "\n";
         return 0u;
     }
@@ -248,6 +248,7 @@ void secondPass(std::ifstream& fileReader,
                     }
                 }
             }
+            if (!labelSingle) instruction_count += 4;
         }
         if (result.size() != 0) {
             uint32_t binary_instruction = binInstruction(result, outputListing);
@@ -266,10 +267,7 @@ void secondPass(std::ifstream& fileReader,
                 outputListing << "                  ";
             } else {
                 outputListing << "    ";
-                outputListing << label;
-                for (size_t i = label.length(); i < 10; i++) {
-                    outputListing << " ";
-                }
+                outputListing << std::left << std::setw(10) << std::setfill(' ') << label << std::right;
                 outputListing << "    ";
             }
             for (const auto& s : result) {
@@ -300,8 +298,6 @@ void secondPass(std::ifstream& fileReader,
             }
             outputListing << "\n";
         }
-
-        if (!labelSingle) instruction_count += 4;
     }
 
     // output listing symbols
