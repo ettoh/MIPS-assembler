@@ -152,7 +152,7 @@ uint32_t binInstruction(const std::vector<std::string>& instruction_parts,
                 return 0u;
             }
 
-            binary_instr |= stoi(instruction_parts[1]);
+            binary_instr |= stoi(instruction_parts[1]) & 0x3FFFFFF;
             break;
 
         case INSTR_TYPE_NULL:
@@ -212,7 +212,7 @@ void secondPass(std::ifstream& fileReader,
                                std::regex(R"(^\s*(\S+)\s+(\S+)\s*$)"))) {
                     if (match.str(1) == "j") {
                         result = {match.str(1),
-                                  std::to_string(labelAddrMap[match.str(2)])};
+                                  std::to_string(labelAddrMap[match.str(2)]/4)};
                     } else {
                         result = {match.str(1), match.str(2)};
                     }
@@ -310,8 +310,8 @@ void secondPass(std::ifstream& fileReader,
         outputListing << std::left << std::setw(13) << std::setfill(' ');
         outputListing << lbl.first << " ";
         outputListing << "0x";
-        outputListing << std::hex << std::uppercase << std::setw(8)
-                      << std::setfill('0');
+        outputListing << std::hex << std::right << std::uppercase
+                      << std::setw(8) << std::setfill('0');
         outputListing << lbl.second;
         outputListing << "\n";
     }
