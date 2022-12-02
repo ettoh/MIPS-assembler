@@ -42,8 +42,8 @@ void firstPass(std::ifstream& fileReader,
 // --------------------------------------------------------
 
 uint32_t regCode(const std::string& s, std::ofstream& errout) {
-    if (std::regex_match(
-            s, std::regex("[$](zero|\d{2}|[a-z]{1}\d{1}|[a-z]{2})"))) {
+    if (!std::regex_match(
+            s, std::regex("[$]{1}(zero|[0-9]{2}|[a-z]{1}[0-9]{1}|[a-z]{2})"))) {
         errout << "Error: Register string invalid: " << s << "\n";
         return 0u;
     }
