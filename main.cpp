@@ -93,7 +93,7 @@ uint32_t binInstruction(const std::vector<std::string>& instruction_parts,
     uint32_t binary_instr = 0x00000000;
     binary_instr |= instruction_codes.op_code << 26;
 
-    // 2. TODO rest ....
+    // 2. parse arguments
     switch (instruction_codes.format) {
         case INSTR_TYPE_R:
             if (argument_cnt == 2) {  // jr instruction
@@ -181,7 +181,7 @@ void secondPass(std::ifstream& fileReader,
         std::string comment;
         std::string label;
         std::vector<std::string> result = {};
-        if (std::regex_search(currentLine, match,std::regex(R"(.*(#.*))"))) {
+        if (std::regex_search(currentLine, match, std::regex(R"(.*(#.*))"))) {
             comment = match.str(1);
         }
         // Looking for lines with codes
@@ -199,16 +199,16 @@ void secondPass(std::ifstream& fileReader,
                         labelSingle = true;
                     }
                     lineWithoutComments = std::regex_replace(
-                            lineWithoutComments, std::regex(R"(\S*:)"), "");
+                        lineWithoutComments, std::regex(R"(\S*:)"), "");
                 }
                 if (std::regex_search(lineWithoutComments,
                                       match,
                                       std::regex(R"(^\s*(\S+)\s*$)"))) {
                     result = {match.str(1)};
                 } else if (std::regex_search(
-                        lineWithoutComments,
-                        match,
-                        std::regex(R"(^\s*(\S+)\s+(\S+)\s*$)"))) {
+                               lineWithoutComments,
+                               match,
+                               std::regex(R"(^\s*(\S+)\s+(\S+)\s*$)"))) {
                     if (match.str(1) == "j") {
                         result = {match.str(1),
                                   std::to_string(labelAddrMap[match.str(2)])};
@@ -216,19 +216,19 @@ void secondPass(std::ifstream& fileReader,
                         result = {match.str(1), match.str(2)};
                     }
                 } else if (
-                        std::regex_search(
-                                lineWithoutComments,
-                                match,
-                                std::regex(
-                                        R"(^\s*(\S+)\s+(\S+),\s*(\d+)\((\S+)\)\s*$)"))) {
+                    std::regex_search(
+                        lineWithoutComments,
+                        match,
+                        std::regex(
+                            R"(^\s*(\S+)\s+(\S+),\s*(\d+)\((\S+)\)\s*$)"))) {
                     result = {
-                            match.str(1), match.str(2), match.str(4), match.str(3)};
+                        match.str(1), match.str(2), match.str(4), match.str(3)};
                 } else if (
-                        std::regex_search(
-                                lineWithoutComments,
-                                match,
-                                std::regex(
-                                        R"(^\s*(\S+)\s+(\S+),\s*(\S+),\s*(\S+)\s*$)"))) {
+                    std::regex_search(
+                        lineWithoutComments,
+                        match,
+                        std::regex(
+                            R"(^\s*(\S+)\s+(\S+),\s*(\S+),\s*(\S+)\s*$)"))) {
                     if (match.str(1) == "beq") {
                         result = {match.str(1),
                                   match.str(2),
@@ -244,8 +244,7 @@ void secondPass(std::ifstream& fileReader,
             }
         }
         if (result.size() != 0) {
-            uint32_t binary_instruction =
-                binInstruction(result, outputListing);
+            uint32_t binary_instruction = binInstruction(result, outputListing);
 
             // output listing
             std::ios hex_format(nullptr);
@@ -257,12 +256,12 @@ void secondPass(std::ifstream& fileReader,
             outputListing << "    0x";
             outputListing.copyfmt(hex_format);
             outputListing << binary_instruction;
-            if (label.empty()){
+            if (label.empty()) {
                 outputListing << "                  ";
             } else {
                 outputListing << "    ";
                 outputListing << label;
-                for (int i=label.length(); i<10; i++) {
+                for (int i = label.length(); i < 10; i++) {
                     outputListing << " ";
                 }
                 outputListing << "    ";
@@ -281,14 +280,14 @@ void secondPass(std::ifstream& fileReader,
             outputInstructions.copyfmt(hex_format);
             outputInstructions << binary_instruction << "\n";
         } else {
-            if(!label.empty() || !comment.empty()){
-                outputListing << "                            " ;
+            if (!label.empty() || !comment.empty()) {
+                outputListing << "                            ";
             }
             if (!label.empty()) {
                 outputListing << label;
             }
-            if(!comment.empty()) {
-                if(!label.empty()) {
+            if (!comment.empty()) {
+                if (!label.empty()) {
                     outputListing << "    ";
                 }
                 outputListing << comment;
@@ -299,7 +298,6 @@ void secondPass(std::ifstream& fileReader,
         if (!labelSingle) instruction_count += 4;
     }
 
-    // TODO order by value?
     // output listing symbols
     outputListing << "\nSymbols\n";
     for (const auto& lbl : labelAddrMap) {
@@ -317,7 +315,6 @@ void secondPass(std::ifstream& fileReader,
 
 int main(int argc, char* argv[]) {
     std::ifstream fileReader(argv[1]);
-    // TODO create folder if neccesarry?
     std::ofstream outputListing("output_listing.txt");
     std::ofstream outputInstructions("out_intructions.txt");
     std::map<std::string, unsigned int> labelAddrMap;
