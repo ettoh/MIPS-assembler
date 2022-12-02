@@ -177,31 +177,38 @@ void secondPass(std::ifstream& fileReader,
 
     while (getline(fileReader, currentLine)) {
         bool labelSingle = false;
+        std::string lineWithoutComments;
+        std::string comment;
+        std::string label;
         std::vector<std::string> result = {};
+        if (std::regex_search(currentLine, match,std::regex(R"(.*(#.*))"))) {
+            comment = match.str(1);
+        }
         // Looking for lines with codes
         if (std::regex_search(currentLine, std::regex(R"(^\s*[^\s#]+\s*#*)"))) {
             // Looking for code without comments (we keep everything before a #)
             if (std::regex_search(currentLine, match, std::regex("[^#]*"))) {
-                std::string lineWithoutComments = match.str(0);
+                lineWithoutComments = match.str(0);
                 // Looking for a label name
                 if (std::regex_search(
                         lineWithoutComments, match, std::regex(R"(\S*:)"))) {
+                    label = match.str(0);
                     // Looking if there is no code after the label
                     if (!std::regex_search(lineWithoutComments,
                                            std::regex(":[^#]*[^#\\s]#*"))) {
                         labelSingle = true;
                     }
                     lineWithoutComments = std::regex_replace(
-                        lineWithoutComments, std::regex(R"(\S*:)"), "");
+                            lineWithoutComments, std::regex(R"(\S*:)"), "");
                 }
                 if (std::regex_search(lineWithoutComments,
                                       match,
                                       std::regex(R"(^\s*(\S+)\s*$)"))) {
                     result = {match.str(1)};
                 } else if (std::regex_search(
-                               lineWithoutComments,
-                               match,
-                               std::regex(R"(^\s*(\S+)\s+(\S+)\s*$)"))) {
+                        lineWithoutComments,
+                        match,
+                        std::regex(R"(^\s*(\S+)\s+(\S+)\s*$)"))) {
                     if (match.str(1) == "j") {
                         result = {match.str(1),
                                   std::to_string(labelAddrMap[match.str(2)])};
@@ -209,19 +216,19 @@ void secondPass(std::ifstream& fileReader,
                         result = {match.str(1), match.str(2)};
                     }
                 } else if (
-                    std::regex_search(
-                        lineWithoutComments,
-                        match,
-                        std::regex(
-                            R"(^\s*(\S+)\s+(\S+),\s*(\d+)\((\S+)\)\s*$)"))) {
+                        std::regex_search(
+                                lineWithoutComments,
+                                match,
+                                std::regex(
+                                        R"(^\s*(\S+)\s+(\S+),\s*(\d+)\((\S+)\)\s*$)"))) {
                     result = {
-                        match.str(1), match.str(2), match.str(4), match.str(3)};
+                            match.str(1), match.str(2), match.str(4), match.str(3)};
                 } else if (
-                    std::regex_search(
-                        lineWithoutComments,
-                        match,
-                        std::regex(
-                            R"(^\s*(\S+)\s+(\S+),\s*(\S+),\s*(\S+)\s*$)"))) {
+                        std::regex_search(
+                                lineWithoutComments,
+                                match,
+                                std::regex(
+                                        R"(^\s*(\S+)\s+(\S+),\s*(\S+),\s*(\S+)\s*$)"))) {
                     if (match.str(1) == "beq") {
                         result = {match.str(1),
                                   match.str(2),
@@ -233,41 +240,63 @@ void secondPass(std::ifstream& fileReader,
                                   match.str(3),
                                   match.str(4)};
                     }
-                } else {
-                    std::cout
-                        << "Error, no match found for : " << lineWithoutComments
-                        << std::endl;
                 }
-
-                if (result.size() != 0) {
-                    uint32_t binary_instruction =
-                        binInstruction(result, outputListing);
-
-                    // output listing
-                    std::ios hex_format(nullptr);
-                    outputListing << "0x";
-                    outputListing << std::hex << std::uppercase << std::setw(8)
-                                  << std::setfill('0');
-                    hex_format.copyfmt(outputListing);
-                    outputListing << instruction_count;
-                    outputListing << "    0x";
-                    outputListing.copyfmt(hex_format);
-                    outputListing << binary_instruction;
-                    outputListing << "    ";
-                    for (const auto& s : result) {
-                        outputListing << s << " ";
-                    }
-                    outputListing << "\n";
-
-                    // output instructions
-                    outputInstructions << "0x";
-                    outputInstructions.copyfmt(hex_format);
-                    outputInstructions << binary_instruction << "\n";
-                }
-
-                if (!labelSingle) instruction_count += 4;
             }
         }
+        if (result.size() != 0) {
+            uint32_t binary_instruction =
+                binInstruction(result, outputListing);
+
+            // output listing
+            std::ios hex_format(nullptr);
+            outputListing << "0x";
+            outputListing << std::hex << std::uppercase << std::setw(8)
+                          << std::setfill('0');
+            hex_format.copyfmt(outputListing);
+            outputListing << instruction_count;
+            outputListing << "    0x";
+            outputListing.copyfmt(hex_format);
+            outputListing << binary_instruction;
+            if (label.empty()){
+                outputListing << "                  ";
+            } else {
+                outputListing << "    ";
+                outputListing << label;
+                for (int i=label.length(); i<10; i++) {
+                    outputListing << " ";
+                }
+                outputListing << "    ";
+            }
+            for (const auto& s : result) {
+                outputListing << s << " ";
+            }
+            if (!comment.empty()) {
+                outputListing << "    ";
+                outputListing << comment;
+            }
+            outputListing << "\n";
+
+            // output instructions
+            outputInstructions << "0x";
+            outputInstructions.copyfmt(hex_format);
+            outputInstructions << binary_instruction << "\n";
+        } else {
+            if(!label.empty() || !comment.empty()){
+                outputListing << "                            " ;
+            }
+            if (!label.empty()) {
+                outputListing << label;
+            }
+            if(!comment.empty()) {
+                if(!label.empty()) {
+                    outputListing << "    ";
+                }
+                outputListing << comment;
+            }
+            outputListing << "\n";
+        }
+
+        if (!labelSingle) instruction_count += 4;
     }
 
     // TODO order by value?
