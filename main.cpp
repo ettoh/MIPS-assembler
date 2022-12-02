@@ -41,11 +41,10 @@ void firstPass(std::ifstream& fileReader,
 
 // --------------------------------------------------------
 
-uint32_t regCode(const std::string& s) {
+uint32_t regCode(const std::string& s, std::ofstream& errout) {
     if (std::regex_match(
             s, std::regex("[$](zero|\d{2}|[a-z]{1}\d{1}|[a-z]{2})"))) {
-        // TODO error handling
-        // register string invalid
+        errout << "Error: Register string invalid: " << s << "\n";
         return 0u;
     }
 
@@ -54,8 +53,8 @@ uint32_t regCode(const std::string& s) {
         s[1] <= 57) {  // there is a number after $ -> no abbreviations
         register_number = stoi(s.substr(1, s.length() - 1));
         if (register_number < 0 || register_number > 31) {
-            // TODO error handling
-            // register out of range
+            errout << "Error: Register out of range: " << register_number
+                   << "\n";
             return 0u;
         }
         return register_number;
@@ -64,8 +63,7 @@ uint32_t regCode(const std::string& s) {
     // register abbreviations
     const auto result = REGISTER_ABRV.find(s);
     if (result == REGISTER_ABRV.end()) {
-        // register abbreviation is not supported!
-        // TODO error handling
+        errout << "Error: Register abbreviation not supported: " << s << "\n";
         return 0u;
     }
 
@@ -74,18 +72,19 @@ uint32_t regCode(const std::string& s) {
 
 // --------------------------------------------------------
 
-uint32_t binInstruction(const std::vector<std::string>& instruction_parts) {
+uint32_t binInstruction(const std::vector<std::string>& instruction_parts,
+                        std::ofstream& errout) {
     size_t argument_cnt = instruction_parts.size();
     if (argument_cnt == 0) {
-        // TODO error handling
+        errout << "Error: Empty instruction can't be converted to binary.\n";
         return 0u;
     }
 
     // find codes and layout for instruction
     const auto result = INSTR_CODES.find(instruction_parts[0]);
     if (result == INSTR_CODES.end()) {
-        // Instruction is not supported!
-        // TODO error handling
+        errout << "Error: Instruction " << instruction_parts[0]
+               << " is not supported.\n";
         return 0u;
     }
     InstructionCodes instruction_codes = result->second;
@@ -98,53 +97,57 @@ uint32_t binInstruction(const std::vector<std::string>& instruction_parts) {
     switch (instruction_codes.format) {
         case INSTR_TYPE_R:
             if (argument_cnt == 2) {  // jr instruction
-                binary_instr |= regCode(instruction_parts[1]) << 21;
+                binary_instr |= regCode(instruction_parts[1], errout) << 21;
                 binary_instr |= instruction_codes.function;
                 break;
             }
 
             if (argument_cnt != 4) {
-                // TODO error handling
-                // invalid instruction format
+                errout << "Error: Wrong amount of arguments for "
+                          "instruction type R: "
+                       << argument_cnt << ".\n";
                 return 0u;
             }
 
-            binary_instr |= regCode(instruction_parts[2]) << 21;  // rs
-            binary_instr |= regCode(instruction_parts[3]) << 16;  // rt
-            binary_instr |= regCode(instruction_parts[1]) << 11;  // rd
-            binary_instr |= instruction_codes.function;           // func. code
+            binary_instr |= regCode(instruction_parts[2], errout) << 21;  // rs
+            binary_instr |= regCode(instruction_parts[3], errout) << 16;  // rt
+            binary_instr |= regCode(instruction_parts[1], errout) << 11;  // rd
+            binary_instr |= instruction_codes.function;  // func. code
             break;
 
         case INSTR_TYPE_R_SHIFT:
             if (argument_cnt != 4) {
-                // TODO error handling
-                // invalid instruction format
+                errout << "Error: Wrong amount of arguments for "
+                          "instruction type R: "
+                       << argument_cnt << ".\n";
                 return 0u;
             }
 
-            binary_instr |= regCode(instruction_parts[2]) << 16;  // rt
-            binary_instr |= regCode(instruction_parts[1]) << 11;  // rd
-            binary_instr |= stoi(instruction_parts[3]) << 6;      // sh
-            binary_instr |= instruction_codes.function;           // func. code
+            binary_instr |= regCode(instruction_parts[2], errout) << 16;  // rt
+            binary_instr |= regCode(instruction_parts[1], errout) << 11;  // rd
+            binary_instr |= stoi(instruction_parts[3]) << 6;              // sh
+            binary_instr |= instruction_codes.function;  // func. code
             break;
 
         case INSTR_TYPE_I:
             if (argument_cnt != 3 && argument_cnt != 4) {
-                // TODO error handling
-                // invalid instruction format
+                errout << "Error: Wrong amount of arguments for "
+                          "instruction type I: "
+                       << argument_cnt << ".\n";
                 return 0u;
             }
 
             // format: {instr, rt, rs, imm} or {instr, rt, rs, offset}
-            binary_instr |= regCode(instruction_parts[2]) << 21;  // rs
-            binary_instr |= regCode(instruction_parts[1]) << 16;  // rt
+            binary_instr |= regCode(instruction_parts[2], errout) << 21;  // rs
+            binary_instr |= regCode(instruction_parts[1], errout) << 16;  // rt
             binary_instr |= stoi(instruction_parts[3]);  // imm or offset
             break;
 
         case INSTR_TYPE_J:
             if (argument_cnt != 2) {
-                // TODO error handling
-                // invalid instruction format
+                errout << "Error: Wrong amount of arguments for "
+                          "instruction type J: "
+                       << argument_cnt << ".\n";
                 return 0u;
             }
 
@@ -237,7 +240,8 @@ void secondPass(std::ifstream& fileReader,
                 }
 
                 if (result.size() != 0) {
-                    uint32_t binary_instruction = binInstruction(result);
+                    uint32_t binary_instruction =
+                        binInstruction(result, outputListing);
 
                     // output listing
                     std::ios hex_format(nullptr);
