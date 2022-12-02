@@ -97,6 +97,12 @@ uint32_t binInstruction(const std::vector<std::string>& instruction_parts) {
     // 2. TODO rest ....
     switch (instruction_codes.format) {
         case INSTR_TYPE_R:
+            if (argument_cnt == 2) {  // jr instruction
+                binary_instr |= regCode(instruction_parts[1]) << 21;
+                binary_instr |= instruction_codes.function;
+                break;
+            }
+
             if (argument_cnt != 4) {
                 // TODO error handling
                 // invalid instruction format
