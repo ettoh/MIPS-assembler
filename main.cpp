@@ -286,6 +286,23 @@ void symbolsOutputPrinting(std::ofstream &outputListing, std::map<std::string, i
 
 // --------------------------------------------------------
 
+/**
+ * @brief Tries to convert a given string into an integer and 
+ * checks if that string can be converted into an integer at all.
+ * 
+ * @param s string
+ * @return std::pair<bool, int> first: bool, if the string can be
+ * converted to an integer; second: converted integer value, 0 if 
+ * conversion failed
+ */
+std::pair<bool, int> strtoi_safe(const std::string& s){
+    char* p;
+    int x = strtol(s.c_str(), &p, 10);
+    return {*p == 0, x};
+}
+
+// --------------------------------------------------------
+
 void secondPass(std::ifstream &fileReader,
                 std::ofstream &outputListing,
                 std::ofstream &outputInstructions,
@@ -333,15 +350,19 @@ void secondPass(std::ifstream &fileReader,
                     result = {match.str(1)};
                 } else if (std::regex_search(lineWithoutComments, match, secondMatch)) {
                     if (match.str(1) == "j") {
-                        auto map_result = labelAddrMap.find(match.str(2));
-                        // label does not exist
-                        if (map_result == labelAddrMap.end()) {
-                            outputListing << "Error: label '" << match.str(2)
-                                          << "' does not exist!" << std::endl;
-                            outputListing.close();
-                            exit(EXIT_FAILURE);
+                        auto converted_string = strtoi_safe(match.str(2));
+                        if(converted_string.first){ // input is already integer
+                            result = {match.str(1), std::to_string(converted_string.second)};
+                        }else{ // input is a label
+                            auto map_result = labelAddrMap.find(match.str(2));
+                            if (map_result == labelAddrMap.end()) {
+                                outputListing << "Error: label '" << match.str(2)
+                                            << "' does not exist!" << std::endl;
+                                outputListing.close();
+                                exit(EXIT_FAILURE);
+                            }
+                            result = {match.str(1), std::to_string(map_result->second / 4)};
                         }
-                        result = {match.str(1), std::to_string(map_result->second / 4)};
                     } else {
                         result = {match.str(1), match.str(2)};
                     }
@@ -349,20 +370,29 @@ void secondPass(std::ifstream &fileReader,
                     result = {match.str(1), match.str(2), match.str(4), match.str(3)};
                 } else if (std::regex_search(lineWithoutComments, match, fourthMatch)) {
                     if (match.str(1) == "beq") {
-                        auto map_result = labelAddrMap.find(match.str(4));
-                        // label does not exist
-                        if (map_result == labelAddrMap.end()) {
-                            outputListing << "Error: label '" << match.str(4)
-                                          << "' does not exist!" << std::endl;
-                            outputListing.close();
-                            exit(EXIT_FAILURE);
-                        }
-                        result = {
+                        auto converted_string = strtoi_safe(match.str(4));
+                        if(converted_string.first){ // input is already integer
+                            result = {
                                 match.str(1),
                                 match.str(3),  // special order for beq and bne
                                 match.str(2),
-                                std::to_string((map_result->second - instruction_count - 4) / 4)
-                        };
+                                std::to_string(converted_string.second)
+                            };
+                        }else{ // input is a label
+                            auto map_result = labelAddrMap.find(match.str(4));
+                            if (map_result == labelAddrMap.end()) {
+                                outputListing << "Error: label '" << match.str(4)
+                                            << "' does not exist!" << std::endl;
+                                outputListing.close();
+                                exit(EXIT_FAILURE);
+                            }
+                            result = {
+                                    match.str(1),
+                                    match.str(3),  // special order for beq and bne
+                                    match.str(2),
+                                    std::to_string((map_result->second - instruction_count - 4) / 4)
+                            };
+                        }
                     } else {
                         result = {match.str(1), match.str(2), match.str(3), match.str(4)};
                     }
