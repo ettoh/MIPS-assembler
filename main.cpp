@@ -8,6 +8,15 @@
 
 #include "definitions.hpp"
 
+/**
+ * @brief First pass to find the addresses for each lable that occur.
+ *
+ * @param fileReader input file stream of the file that contains the raw
+ * instructions
+ * @param outputFile output file stream for error messages
+ * @param labelAddrMap reference to the map that will store the numerical
+ * addresses of each label
+ */
 void firstPass(std::ifstream& fileReader,
                std::ofstream& outputFile,
                std::map<std::string, int>& labelAddrMap) {
@@ -41,6 +50,18 @@ void firstPass(std::ifstream& fileReader,
 
 // --------------------------------------------------------
 
+/**
+ * @brief Converts a register abbreviation into the numerical index of the
+ * corresponding register.
+ *
+ * @param s String that contains the register abbreviation. Must begin with '$'
+ * followed by either the numeric index or the alphanumerical abbreviation. E.g.
+ * "$14" or "$t1".
+ * @param errout Reference to a file output stream where the error message
+ * should be printed to.
+ * @return uint32_t the numerical index of the corresponding register. 0, if an
+ * error occured.
+ */
 uint32_t regCode(const std::string& s, std::ofstream& errout) {
     if (!std::regex_match(
             s, std::regex(R"([$](zero|[0-9]{2}|[a-z]\d|[a-z]{2}))"))) {
@@ -72,6 +93,16 @@ uint32_t regCode(const std::string& s, std::ofstream& errout) {
 
 // --------------------------------------------------------
 
+/**
+ * @brief Converts a MIPS instruction into its binary form.
+ *
+ * @param instruction_parts a valid MIPS instruction that was split into its
+ * parts so it won't containt any whitespaces or other seperators. E.g. "add
+ * $t2, $t1, $t1" has to be split into {"add", "$t2", "$t1", "$t1"}
+ * @param errout Reference to a file output stream where the error message
+ * should be printed to.
+ * @return uint32_t binary MIPS instruction
+ */
 uint32_t binInstruction(const std::vector<std::string>& instruction_parts,
                         std::ofstream& errout) {
     size_t argument_cnt = instruction_parts.size();
@@ -117,8 +148,8 @@ uint32_t binInstruction(const std::vector<std::string>& instruction_parts,
 
         case INSTR_TYPE_R_SHIFT:
             if (argument_cnt != 4) {
-                errout << "Error: Wrong amount of arguments for instruction "
-                          "type R: "
+                errout << "Error: Wrong amount of arguments for "
+                          "instruction type R: "
                        << argument_cnt << ".\n";
                 return 0u;
             }
@@ -166,6 +197,18 @@ uint32_t binInstruction(const std::vector<std::string>& instruction_parts,
 
 // --------------------------------------------------------
 
+/**
+ * @brief Second pass to validate the instructions, handle comments, split the
+ * instructions into their parts and eventually convert and print them.
+ *
+ * @param fileReader input file stream of the file that contains the raw
+ * instructions
+ * @param outputListing output file stream for the file containing the listing
+ * @param outputInstructions output file stream for the file containing the
+ * instructions
+ * @param labelAddrMap reference to a map that holds the numerical addresses for
+ * each label
+ */
 void secondPass(std::ifstream& fileReader,
                 std::ofstream& outputListing,
                 std::ofstream& outputInstructions,
