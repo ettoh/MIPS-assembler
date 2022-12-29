@@ -211,8 +211,9 @@ void secondPass(std::ifstream& fileReader,
                                match,
                                std::regex(R"(^\s*(\S+)\s+(\S+)\s*$)"))) {
                     if (match.str(1) == "j") {
-                        result = {match.str(1),
-                                  std::to_string(labelAddrMap[match.str(2)]/4)};
+                        result = {
+                            match.str(1),
+                            std::to_string(labelAddrMap[match.str(2)] / 4)};
                     } else {
                         result = {match.str(1), match.str(2)};
                     }
@@ -248,7 +249,6 @@ void secondPass(std::ifstream& fileReader,
                     }
                 }
             }
-            
         }
         if (result.size() != 0) {
             uint32_t binary_instruction = binInstruction(result, outputListing);
@@ -256,8 +256,7 @@ void secondPass(std::ifstream& fileReader,
             // output listing
             std::ios hex_format(nullptr);
             outputListing << "0x";
-            outputListing << std::hex << std::uppercase << std::setw(8)
-                          << std::setfill('0');
+            outputListing << std::hex << std::setw(8) << std::setfill('0');
             hex_format.copyfmt(outputListing);
             outputListing << instruction_count;
             outputListing << "    0x";
@@ -267,7 +266,8 @@ void secondPass(std::ifstream& fileReader,
                 outputListing << "                  ";
             } else {
                 outputListing << "    ";
-                outputListing << std::left << std::setw(10) << std::setfill(' ') << label << std::right;
+                outputListing << std::left << std::setw(10) << std::setfill(' ')
+                              << label << std::right;
                 outputListing << "    ";
             }
             for (const auto& s : result) {
@@ -299,7 +299,6 @@ void secondPass(std::ifstream& fileReader,
             }
             outputListing << "\n";
         }
-        
     }
 
     // output listing symbols
@@ -308,8 +307,8 @@ void secondPass(std::ifstream& fileReader,
         outputListing << std::left << std::setw(13) << std::setfill(' ');
         outputListing << lbl.first << " ";
         outputListing << "0x";
-        outputListing << std::hex << std::right << std::uppercase
-                      << std::setw(8) << std::setfill('0');
+        outputListing << std::hex << std::right << std::setw(8)
+                      << std::setfill('0');
         outputListing << lbl.second;
         outputListing << "\n";
     }
