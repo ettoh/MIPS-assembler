@@ -3,10 +3,11 @@
 #include <iostream>
 #include <map>
 #include <regex>
-#include <sstream>
 #include <vector>
 
 #include "definitions.hpp"
+
+#include <chrono>
 
 /**
  * @brief First pass to find the addresses for each lable that occur.
@@ -17,28 +18,28 @@
  * @param labelAddrMap reference to the map that will store the numerical
  * addresses of each label
  */
-void firstPass(std::ifstream& fileReader,
-               std::ofstream& outputFile,
-               std::map<std::string, int>& labelAddrMap) {
+void firstPass(std::ifstream &fileReader, std::ofstream &outputFile, std::map<std::string, int> &labelAddrMap) {
     std::string currentLine;
     unsigned int addrPointer = 0;
     std::smatch match;
+    std::regex regex1(R"(^\s*[^\s#]+\s*#*)");
+    std::regex regex2("[^#]*");
+    std::regex regex3("\\S*(?=:)");
+    std::regex regex4(":[^#]*[^#\\s]#*");
 
     while (getline(fileReader, currentLine)) {
         bool labelSingle = false;
         // Looking for lines with codes
-        if (std::regex_search(currentLine, std::regex(R"(^\s*[^\s#]+\s*#*)"))) {
+        if (std::regex_search(currentLine, regex1)) {
             // Looking for code without comments (we keep everything before a #)
-            if (std::regex_search(currentLine, match, std::regex("[^#]*"))) {
+            if (std::regex_search(currentLine, match, regex2)) {
                 std::string lineWithoutComments = match.str(0);
                 // Looking for a label name
-                if (std::regex_search(
-                        lineWithoutComments, match, std::regex("\\S*(?=:)"))) {
+                if (std::regex_search(lineWithoutComments, match, regex3)) {
                     labelAddrMap[match.str(0)] = addrPointer;
 
                     // Looking if there is no code after the label
-                    if (!std::regex_search(lineWithoutComments,
-                                           std::regex(":[^#]*[^#\\s]#*"))) {
+                    if (!std::regex_search(lineWithoutComments, regex4)) {
                         labelSingle = true;
                     }
                 }
@@ -62,9 +63,8 @@ void firstPass(std::ifstream& fileReader,
  * @return uint32_t the numerical index of the corresponding register. 0, if an
  * error occured.
  */
-uint32_t regCode(const std::string& s, std::ofstream& errout) {
-    if (!std::regex_match(
-            s, std::regex(R"([$](zero|[0-9]{2}|[a-z]\d|[a-z]{2}))"))) {
+uint32_t regCode(const std::string &s, std::ofstream &errout) {
+    if (!std::regex_match(s, std::regex(R"([$](zero|[0-9]{2}|[a-z]\d|[a-z]{2}))"))) {
         errout << "Error: Register string invalid: " << s << "\n";
         return 0u;
     }
@@ -74,8 +74,7 @@ uint32_t regCode(const std::string& s, std::ofstream& errout) {
         s[1] <= 57) {  // there is a number after $ -> no abbreviations
         register_number = stoi(s.substr(1, s.length() - 1));
         if (register_number < 0 || register_number > 31) {
-            errout << "Error: Register out of range: " << register_number
-                   << "\n";
+            errout << "Error: Register out of range: " << register_number << "\n";
             return 0u;
         }
         return register_number;
@@ -103,8 +102,7 @@ uint32_t regCode(const std::string& s, std::ofstream& errout) {
  * should be printed to.
  * @return uint32_t binary MIPS instruction
  */
-uint32_t binInstruction(const std::vector<std::string>& instruction_parts,
-                        std::ofstream& errout) {
+uint32_t binInstruction(const std::vector<std::string> &instruction_parts, std::ofstream &errout) {
     size_t argument_cnt = instruction_parts.size();
     if (argument_cnt == 0) {
         errout << "Error: Empty instruction can't be converted to binary.\n";
@@ -114,8 +112,7 @@ uint32_t binInstruction(const std::vector<std::string>& instruction_parts,
     // find codes and layout for instruction
     const auto result = INSTR_CODES.find(instruction_parts[0]);
     if (result == INSTR_CODES.end()) {
-        errout << "Error: Instruction " << instruction_parts[0]
-               << " is not supported.\n";
+        errout << "Error: Instruction " << instruction_parts[0] << " is not supported.\n";
         return 0u;
     }
     InstructionCodes instruction_codes = result->second;
@@ -134,9 +131,7 @@ uint32_t binInstruction(const std::vector<std::string>& instruction_parts,
             }
 
             if (argument_cnt != 4) {
-                errout << "Error: Wrong amount of arguments for "
-                          "instruction type R: "
-                       << argument_cnt << ".\n";
+                errout << "Error: Wrong amount of arguments for instruction type R: " << argument_cnt << ".\n";
                 return 0u;
             }
 
@@ -148,9 +143,7 @@ uint32_t binInstruction(const std::vector<std::string>& instruction_parts,
 
         case INSTR_TYPE_R_SHIFT:
             if (argument_cnt != 4) {
-                errout << "Error: Wrong amount of arguments for "
-                          "instruction type R: "
-                       << argument_cnt << ".\n";
+                errout << "Error: Wrong amount of arguments for instruction type R: " << argument_cnt << ".\n";
                 return 0u;
             }
 
@@ -162,24 +155,19 @@ uint32_t binInstruction(const std::vector<std::string>& instruction_parts,
 
         case INSTR_TYPE_I:
             if (argument_cnt != 3 && argument_cnt != 4) {
-                errout << "Error: Wrong amount of arguments for "
-                          "instruction type I: "
-                       << argument_cnt << ".\n";
+                errout << "Error: Wrong amount of arguments for instruction type I: " << argument_cnt << ".\n";
                 return 0u;
             }
 
             // format: {instr, rt, rs, imm} or {instr, rt, rs, offset}
             binary_instr |= regCode(instruction_parts[2], errout) << 21;  // rs
             binary_instr |= regCode(instruction_parts[1], errout) << 16;  // rt
-            binary_instr |=
-                stoi(instruction_parts[3]) & 0xFFFF;  // imm or offset
+            binary_instr |= stoi(instruction_parts[3]) & 0xFFFF;  // imm or offset
             break;
 
         case INSTR_TYPE_J:
             if (argument_cnt != 2) {
-                errout << "Error: Wrong amount of arguments for "
-                          "instruction type J: "
-                       << argument_cnt << ".\n";
+                errout << "Error: Wrong amount of arguments for instruction type J: " << argument_cnt << ".\n";
                 return 0u;
             }
 
@@ -209,89 +197,16 @@ uint32_t binInstruction(const std::vector<std::string>& instruction_parts,
  * @param labelAddrMap reference to a map that holds the numerical addresses for
  * each label
  */
-void secondPass(std::ifstream& fileReader,
-                std::ofstream& outputListing,
-                std::ofstream& outputInstructions,
-                std::map<std::string, int>& labelAddrMap) {
-    fileReader.clear();
-    fileReader.seekg(0);
-    std::string currentLine;
-    int instruction_count = 0;
-    std::smatch match;
-
-    while (getline(fileReader, currentLine)) {
-        bool labelSingle = false;
-        std::string lineWithoutComments;
-        std::string comment;
-        std::string label;
-        std::vector<std::string> result = {};
-        if (std::regex_search(currentLine, match, std::regex(R"(.*(#.*))"))) {
-            comment = match.str(1);
-        }
-        // Looking for lines with codes
-        if (std::regex_search(currentLine, std::regex(R"(^\s*[^\s#]+\s*#*)"))) {
-            // Looking for code without comments (we keep everything before a #)
-            if (std::regex_search(currentLine, match, std::regex("[^#]*"))) {
-                lineWithoutComments = match.str(0);
-                // Looking for a label name
-                if (std::regex_search(
-                        lineWithoutComments, match, std::regex(R"(\S*:)"))) {
-                    label = match.str(0);
-                    // Looking if there is no code after the label
-                    if (!std::regex_search(lineWithoutComments,
-                                           std::regex(":[^#]*[^#\\s]#*"))) {
-                        labelSingle = true;
-                    }
-                    lineWithoutComments = std::regex_replace(
-                        lineWithoutComments, std::regex(R"(\S*:)"), "");
-                }
-                if (std::regex_search(lineWithoutComments,
-                                      match,
-                                      std::regex(R"(^\s*(\S+)\s*$)"))) {
-                    result = {match.str(1)};
-                } else if (std::regex_search(
-                               lineWithoutComments,
-                               match,
-                               std::regex(R"(^\s*(\S+)\s+(\S+)\s*$)"))) {
-                    if (match.str(1) == "j") {
-                        result = {
-                            match.str(1),
-                            std::to_string(labelAddrMap[match.str(2)] / 4)};
-                    } else {
-                        result = {match.str(1), match.str(2)};
-                    }
-                } else if (
-                    std::regex_search(
-                        lineWithoutComments,
-                        match,
-                        std::regex(
-                            R"(^\s*(\S+)\s+(\S+),\s*(\d+)\((\S+)\)\s*$)"))) {
-                    result = {
-                        match.str(1), match.str(2), match.str(4), match.str(3)};
-                } else if (
-                    std::regex_search(
-                        lineWithoutComments,
-                        match,
-                        std::regex(
-                            R"(^\s*(\S+)\s+(\S+),\s*(\S+),\s*(\S+)\s*$)"))) {
-                    if (match.str(1) == "beq") {
-                        result = {
-                            match.str(1),
-                            match.str(3),  // special order for beq and bne
-                            match.str(2),
-                            std::to_string((labelAddrMap[match.str(4)] -
-                                            instruction_count - 4) /
-                                           4)};
-
-                    } else {
-                        result = {match.str(1),
-                                  match.str(2),
-                                  match.str(3),
-                                  match.str(4)};
-                    }
-                }
-            }
-        }
+void outputPrinting(std::ofstream &outputListing,
+            std::ofstream &outputInstructions,
+            std::vector<std::string> &result,
+            std::string &comment,
+            std::string &label,
+            int &instruction_count,
+            bool &labelSingle) {
+    if (!result.empty() && result[0] == "err") {
+        outputListing << "Error: Wrong amount of arguments, operation not supported" << ".\n";
+    } else {
         if (result.size() != 0) {
             uint32_t binary_instruction = binInstruction(result, outputListing);
 
@@ -308,11 +223,10 @@ void secondPass(std::ifstream& fileReader,
                 outputListing << "                  ";
             } else {
                 outputListing << "    ";
-                outputListing << std::left << std::setw(10) << std::setfill(' ')
-                              << label << std::right;
+                outputListing << std::left << std::setw(10) << std::setfill(' ') << label << std::right;
                 outputListing << "    ";
             }
-            for (const auto& s : result) {
+            for (const auto &s: result) {
                 outputListing << s << " ";
             }
             if (!comment.empty()) {
@@ -342,18 +256,96 @@ void secondPass(std::ifstream& fileReader,
             outputListing << "\n";
         }
     }
+}
 
-    // output listing symbols
+// --------------------------------------------------------
+
+void symbolsOutputPrinting(std::ofstream &outputListing, std::map<std::string, int> &labelAddrMap) {
     outputListing << "\nSymbols\n";
-    for (const auto& lbl : labelAddrMap) {
+    for (const auto &lbl: labelAddrMap) {
         outputListing << std::left << std::setw(13) << std::setfill(' ');
         outputListing << lbl.first << " ";
         outputListing << "0x";
-        outputListing << std::hex << std::right << std::setw(8)
-                      << std::setfill('0');
+        outputListing << std::hex << std::right << std::setw(8) << std::setfill('0');
         outputListing << lbl.second;
         outputListing << "\n";
     }
+}
+
+// --------------------------------------------------------
+
+void secondPass(std::ifstream &fileReader,
+                std::ofstream &outputListing,
+                std::ofstream &outputInstructions,
+                std::map<std::string, int> &labelAddrMap) {
+    fileReader.clear();
+    fileReader.seekg(0);
+    std::string currentLine;
+    int instruction_count = 0;
+    std::smatch match;
+    std::regex regex1(R"(.*(#.*))");
+    std::regex regex2((R"(^\s*[^\s#]+\s*#*)"));
+    std::regex regex3("[^#]*");
+    std::regex regex4((R"(\S*:)"));
+    std::regex regex5(":[^#]*[^#\\s]#*");
+    std::regex regex6(R"(\S*:)");
+    std::regex firstMatch(R"(^\s*(\S+)\s*$)");
+    std::regex secondMatch(R"(^\s*(\S+)\s+(\S+)\s*$)");
+    std::regex thirdMatch(R"(^\s*(\S+)\s+(\S+),\s*(\d+)\((\S+)\)\s*$)");
+    std::regex fourthMatch(R"(^\s*(\S+)\s+(\S+),\s*(\S+),\s*(\S+)\s*$)");
+
+    while (getline(fileReader, currentLine)) {
+        bool labelSingle = false;
+        std::string lineWithoutComments;
+        std::string comment;
+        std::string label;
+        std::vector<std::string> result = {};
+        if (std::regex_search(currentLine, match, regex1)) {
+            comment = match.str(1);
+        }
+        // Looking for lines with codes
+        if (std::regex_search(currentLine, regex2)) {
+            // Looking for code without comments (we keep everything before a #)
+            if (std::regex_search(currentLine, match, regex3)) {
+                lineWithoutComments = match.str(0);
+                // Looking for a label name
+                if (std::regex_search(lineWithoutComments, match, regex4)) {
+                    label = match.str(0);
+                    // Looking if there is no code after the label
+                    if (!std::regex_search(lineWithoutComments, regex5)) {
+                        labelSingle = true;
+                    }
+                    lineWithoutComments = std::regex_replace(lineWithoutComments, regex6, "");
+                }
+                if (std::regex_search(lineWithoutComments, match, firstMatch)) {
+                    result = {match.str(1)};
+                } else if (std::regex_search(lineWithoutComments, match, secondMatch)) {
+                    if (match.str(1) == "j") {
+                        result = {match.str(1), std::to_string(labelAddrMap[match.str(2)] / 4)};
+                    } else {
+                        result = {match.str(1), match.str(2)};
+                    }
+                } else if (std::regex_search(lineWithoutComments, match, thirdMatch)) {
+                    result = {match.str(1), match.str(2), match.str(4), match.str(3)};
+                } else if (std::regex_search(lineWithoutComments, match, fourthMatch)) {
+                    if (match.str(1) == "beq") {
+                        result = {
+                                match.str(1),
+                                match.str(3),  // special order for beq and bne
+                                match.str(2),
+                                std::to_string((labelAddrMap[match.str(4)] - instruction_count - 4) / 4)
+                        };
+                    } else {
+                        result = {match.str(1), match.str(2), match.str(3), match.str(4)};
+                    }
+                } else if (label.empty()) {
+                    result = {"err"};
+                }
+            }
+        }
+        outputPrinting(outputListing, outputInstructions, result, comment, label, instruction_count, labelSingle);
+    }
+    symbolsOutputPrinting(outputListing, labelAddrMap);
 }
 
 // --------------------------------------------------------
@@ -373,10 +365,15 @@ int main(int argc, char* argv[]) {
     }
 
     std::map<std::string, int> labelAddrMap;
+
+    auto start = std::chrono::high_resolution_clock::now();
     firstPass(fileReader, outputListing, labelAddrMap);
+    auto stop = std::chrono::high_resolution_clock::now();
     secondPass(fileReader, outputListing, outputInstructions, labelAddrMap);
     fileReader.close();
     outputListing.close();
     outputInstructions.close();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+    std::cout << duration.count() << std::endl;
     return 0;
 }
