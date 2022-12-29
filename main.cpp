@@ -359,11 +359,20 @@ void secondPass(std::ifstream& fileReader,
 // --------------------------------------------------------
 
 int main(int argc, char* argv[]) {
-    std::ifstream fileReader(argv[1]);
-    std::ofstream outputListing("output_listing.txt");
-    std::ofstream outputInstructions("out_intructions.txt");
-    std::map<std::string, int> labelAddrMap;
+    // call like "./executable inputfile output_listing output_instructions"
+    if(argc != 4){
+        return 1;
+    }
 
+    // open files
+    std::ifstream fileReader(argv[1]);
+    std::ofstream outputListing(argv[2]);
+    std::ofstream outputInstructions(argv[3]);
+    if(!fileReader.is_open() || !outputInstructions.is_open() || ! outputListing.is_open()){
+        return 1;
+    }
+
+    std::map<std::string, int> labelAddrMap;
     firstPass(fileReader, outputListing, labelAddrMap);
     secondPass(fileReader, outputListing, outputInstructions, labelAddrMap);
     fileReader.close();
