@@ -4,6 +4,7 @@
 #include <map>
 #include <regex>
 #include <vector>
+#include <stdexcept>
 
 #include "definitions.hpp"
 
@@ -65,8 +66,9 @@ void firstPass(std::ifstream &fileReader, std::ofstream &outputFile, std::map<st
  */
 uint32_t regCode(const std::string &s, std::ofstream &errout) {
     if (!std::regex_match(s, std::regex(R"([$](zero|[0-9]{2}|[a-z]\d|[a-z]{2}))"))) {
-        errout << "Error: Register string invalid: " << s << "\n";
-        return 0u;
+        errout << "Error: Register string invalid: " << s << ". Abort ...\n";
+        errout.close();
+        exit(EXIT_FAILURE);
     }
 
     uint32_t register_number = 0;
@@ -74,8 +76,9 @@ uint32_t regCode(const std::string &s, std::ofstream &errout) {
         s[1] <= 57) {  // there is a number after $ -> no abbreviations
         register_number = stoi(s.substr(1, s.length() - 1));
         if (register_number < 0 || register_number > 31) {
-            errout << "Error: Register out of range: " << register_number << "\n";
-            return 0u;
+            errout << "Error: Register out of range: " << register_number << ". Abort ...\n";
+            errout.close();
+            exit(EXIT_FAILURE);
         }
         return register_number;
     }
@@ -83,8 +86,9 @@ uint32_t regCode(const std::string &s, std::ofstream &errout) {
     // register abbreviations
     const auto result = REGISTER_ABRV.find(s);
     if (result == REGISTER_ABRV.end()) {
-        errout << "Error: Register abbreviation not supported: " << s << "\n";
-        return 0u;
+        errout << "Error: Register abbreviation not supported: " << s << ". Abort ...\n";
+        errout.close();
+        exit(EXIT_FAILURE);
     }
 
     return result->second;
@@ -105,15 +109,17 @@ uint32_t regCode(const std::string &s, std::ofstream &errout) {
 uint32_t binInstruction(const std::vector<std::string> &instruction_parts, std::ofstream &errout) {
     size_t argument_cnt = instruction_parts.size();
     if (argument_cnt == 0) {
-        errout << "Error: Empty instruction can't be converted to binary.\n";
-        return 0u;
+        errout << "Error: Empty instruction can't be converted to binary. Abort ...\n";
+        errout.close();
+        exit(EXIT_FAILURE);
     }
 
     // find codes and layout for instruction
     const auto result = INSTR_CODES.find(instruction_parts[0]);
     if (result == INSTR_CODES.end()) {
-        errout << "Error: Instruction " << instruction_parts[0] << " is not supported.\n";
-        return 0u;
+        errout << "Error: Instruction " << instruction_parts[0] << " is not supported. Abort ...\n";
+        errout.close();
+        exit(EXIT_FAILURE);
     }
     InstructionCodes instruction_codes = result->second;
 
@@ -132,7 +138,8 @@ uint32_t binInstruction(const std::vector<std::string> &instruction_parts, std::
 
             if (argument_cnt != 4) {
                 errout << "Error: Wrong amount of arguments for instruction type R: " << argument_cnt << ".\n";
-                return 0u;
+                errout.close();
+                exit(EXIT_FAILURE);
             }
 
             binary_instr |= regCode(instruction_parts[2], errout) << 21;  // rs
@@ -144,7 +151,8 @@ uint32_t binInstruction(const std::vector<std::string> &instruction_parts, std::
         case INSTR_TYPE_R_SHIFT:
             if (argument_cnt != 4) {
                 errout << "Error: Wrong amount of arguments for instruction type R: " << argument_cnt << ".\n";
-                return 0u;
+                errout.close();
+                exit(EXIT_FAILURE);
             }
 
             binary_instr |= regCode(instruction_parts[2], errout) << 16;  // rt
@@ -156,7 +164,8 @@ uint32_t binInstruction(const std::vector<std::string> &instruction_parts, std::
         case INSTR_TYPE_I:
             if (argument_cnt != 3 && argument_cnt != 4) {
                 errout << "Error: Wrong amount of arguments for instruction type I: " << argument_cnt << ".\n";
-                return 0u;
+                errout.close();
+                exit(EXIT_FAILURE);
             }
 
             // format: {instr, rt, rs, imm} or {instr, rt, rs, offset}
@@ -168,7 +177,8 @@ uint32_t binInstruction(const std::vector<std::string> &instruction_parts, std::
         case INSTR_TYPE_J:
             if (argument_cnt != 2) {
                 errout << "Error: Wrong amount of arguments for instruction type J: " << argument_cnt << ".\n";
-                return 0u;
+                errout.close();
+                exit(EXIT_FAILURE);
             }
 
             binary_instr |= stoi(instruction_parts[1]) & 0x3FFFFFF;
@@ -206,6 +216,8 @@ void outputPrinting(std::ofstream &outputListing,
             bool &labelSingle) {
     if (!result.empty() && result[0] == "err") {
         outputListing << "Error: Wrong amount of arguments, operation not supported" << ".\n";
+        outputListing.close();
+        exit(EXIT_FAILURE);
     } else {
         if (result.size() != 0) {
             uint32_t binary_instruction = binInstruction(result, outputListing);
@@ -326,6 +338,8 @@ void secondPass(std::ifstream &fileReader,
                         if (map_result == labelAddrMap.end()) {
                             outputListing << "Error: label '" << match.str(2)
                                           << "' does not exist!" << std::endl;
+                            outputListing.close();
+                            exit(EXIT_FAILURE);
                         }
                         result = {match.str(1), std::to_string(map_result->second / 4)};
                     } else {
@@ -340,6 +354,8 @@ void secondPass(std::ifstream &fileReader,
                         if (map_result == labelAddrMap.end()) {
                             outputListing << "Error: label '" << match.str(4)
                                           << "' does not exist!" << std::endl;
+                            outputListing.close();
+                            exit(EXIT_FAILURE);
                         }
                         result = {
                                 match.str(1),
