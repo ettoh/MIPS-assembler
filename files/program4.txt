@@ -1,0 +1,21 @@
+# Test program for assignment 1, a mips assembler, HT-21
+begin: 
+       add    $s1, $s2, $s3
+       sub    $s1, $s0, $s1
+       and    $s1, $s0, $s1
+       or     $s1, $s0, $s1
+       nor    $s1, $s0, $s1
+
+       slt    $s1, $t1, $t9
+
+       lw     $t1, 12($t2)
+       sw     $t1, 12($t2)
+
+       beq    $t0, $t1, begin
+       addi   $s1, $s1, 10
+
+       sll    $s1, $t1, 19
+
+       j      end
+       jr     $ra
+end:   nop

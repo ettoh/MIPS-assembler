@@ -11,6 +11,7 @@ BreakInheritanceList: BeforeComma
 BreakStringLiterals: true
 FixNamespaceComments: true
 IndentWidth: 4
+# ColumnLimit: 120
 Language: Cpp
 PointerAlignment: Left
 TabWidth: 4

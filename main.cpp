@@ -117,8 +117,8 @@ uint32_t binInstruction(const std::vector<std::string>& instruction_parts,
 
         case INSTR_TYPE_R_SHIFT:
             if (argument_cnt != 4) {
-                errout << "Error: Wrong amount of arguments for "
-                          "instruction type R: "
+                errout << "Error: Wrong amount of arguments for instruction "
+                          "type R: "
                        << argument_cnt << ".\n";
                 return 0u;
             }
@@ -237,9 +237,8 @@ void secondPass(std::ifstream& fileReader,
                             match.str(3),  // special order for beq and bne
                             match.str(2),
                             std::to_string((labelAddrMap[match.str(4)] -
-                                            instruction_count) /
-                                               4 +
-                                           1)};
+                                            instruction_count - 4) /
+                                           4)};
 
                     } else {
                         result = {match.str(1),
