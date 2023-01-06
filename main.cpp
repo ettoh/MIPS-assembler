@@ -15,11 +15,10 @@
  *
  * @param fileReader input file stream of the file that contains the raw
  * instructions
- * @param outputFile output file stream for error messages
  * @param labelAddrMap reference to the map that will store the numerical
  * addresses of each label
  */
-void firstPass(std::ifstream &fileReader, std::ofstream &outputFile, std::map<std::string, int> &labelAddrMap) {
+void firstPass(std::ifstream &fileReader, std::map<std::string, int> &labelAddrMap) {
     std::string currentLine;
     unsigned int addrPointer = 0;
     std::smatch match;
@@ -196,16 +195,21 @@ uint32_t binInstruction(const std::vector<std::string> &instruction_parts, std::
 // --------------------------------------------------------
 
 /**
- * @brief Second pass to validate the instructions, handle comments, split the
- * instructions into their parts and eventually convert and print them.
+ * @brief outputPrinting generates the two output files after the execution
+ * of the second pass
  *
- * @param fileReader input file stream of the file that contains the raw
- * instructions
  * @param outputListing output file stream for the file containing the listing
  * @param outputInstructions output file stream for the file containing the
  * instructions
- * @param labelAddrMap reference to a map that holds the numerical addresses for
- * each label
+ * @param result contain the parts of the MIPS instruction to handle
+ * @param comment contain the comment if there is one on the line
+ * @param label contain the label which is placed at the beginning of the line
+ * if there is one
+ * @param labelCall in case of instruction "j" or "beq", contain the label
+ * name to jump to
+ * @param instruction_count contain the current instruction address
+ * @param labelSingle is true if a label is the only element on the line
+ * (doesn't take into account potential comment)
  */
 void outputPrinting(std::ofstream &outputListing,
             std::ofstream &outputInstructions,
@@ -281,6 +285,14 @@ void outputPrinting(std::ofstream &outputListing,
 
 // --------------------------------------------------------
 
+/**
+ * @brief symbolsOutputPrinting print the symbols at the ends of the listing
+ * file when the outputPrinting function has finished
+ *
+ * @param outputListing output file stream for the file containing the listing
+ * @param labelAddrMap reference to a map that holds the numerical addresses for
+ * each label
+ */
 void symbolsOutputPrinting(std::ofstream &outputListing, std::map<std::string, int> &labelAddrMap) {
     outputListing << "\nSymbols\n";
     for (const auto &lbl: labelAddrMap) {
@@ -312,6 +324,18 @@ std::pair<bool, int> strtoi_safe(const std::string& s){
 
 // --------------------------------------------------------
 
+/**
+ * @brief Second pass to validate the instructions, handle comments, split the
+ * instructions into their parts and eventually convert and print them.
+ *
+ * @param fileReader input file stream of the file that contains the raw
+ * instructions
+ * @param outputListing output file stream for the file containing the listing
+ * @param outputInstructions output file stream for the file containing the
+ * instructions
+ * @param labelAddrMap reference to a map that holds the numerical addresses for
+ * each label
+ */
 void secondPass(std::ifstream &fileReader,
                 std::ofstream &outputListing,
                 std::ofstream &outputInstructions,
@@ -437,7 +461,7 @@ int main(int argc, char* argv[]) {
     std::map<std::string, int> labelAddrMap;
 
     auto start = std::chrono::high_resolution_clock::now();
-    firstPass(fileReader, outputListing, labelAddrMap);
+    firstPass(fileReader, labelAddrMap);
     auto stop = std::chrono::high_resolution_clock::now();
     secondPass(fileReader, outputListing, outputInstructions, labelAddrMap);
     fileReader.close();
