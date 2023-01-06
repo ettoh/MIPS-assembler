@@ -8,8 +8,6 @@
 
 #include "definitions.hpp"
 
-#include <chrono>
-
 /**
  * @brief First pass to find the addresses for each lable that occur.
  *
@@ -460,14 +458,10 @@ int main(int argc, char* argv[]) {
 
     std::map<std::string, int> labelAddrMap;
 
-    auto start = std::chrono::high_resolution_clock::now();
     firstPass(fileReader, labelAddrMap);
-    auto stop = std::chrono::high_resolution_clock::now();
     secondPass(fileReader, outputListing, outputInstructions, labelAddrMap);
     fileReader.close();
     outputListing.close();
     outputInstructions.close();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-    std::cout << duration.count() << std::endl;
     return 0;
 }
