@@ -165,6 +165,12 @@ uint32_t binInstruction(const std::vector<std::string> &instruction_parts, std::
                 exit(EXIT_FAILURE);
             }
 
+            if(stoi(instruction_parts[3]) > 0xFFFF){
+                errout << "Error: Argument too long.\n";
+                errout.close();
+                exit(EXIT_FAILURE);
+            }
+
             // format: {instr, rt, rs, imm} or {instr, rt, rs, offset}
             binary_instr |= regCode(instruction_parts[2], errout) << 21;  // rs
             binary_instr |= regCode(instruction_parts[1], errout) << 16;  // rt
@@ -174,6 +180,12 @@ uint32_t binInstruction(const std::vector<std::string> &instruction_parts, std::
         case INSTR_TYPE_J:
             if (argument_cnt != 2) {
                 errout << "Error: Wrong amount of arguments for instruction type J: " << argument_cnt << ".\n";
+                errout.close();
+                exit(EXIT_FAILURE);
+            }
+
+            if(stoi(instruction_parts[1]) > 0x3FFFFFF){
+                errout << "Error: Jump address too long.\n";
                 errout.close();
                 exit(EXIT_FAILURE);
             }
@@ -404,6 +416,13 @@ void secondPass(std::ifstream &fileReader,
                 } else if (std::regex_search(lineWithoutComments, match, fourthMatch)) {
                     if (match.str(1) == "beq") {
                         auto converted_string = strtoi_safe(match.str(4));
+
+                        if(converted_string.second > 0xFFFF){
+                            outputListing << "Error: Argument too long.\n";
+                            outputListing.close();
+                            exit(EXIT_FAILURE);
+                        }
+
                         if(converted_string.first){ // input is already integer
                             result = {
                                 match.str(1),
