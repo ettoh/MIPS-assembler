@@ -210,9 +210,9 @@ uint32_t binInstruction(const std::vector<std::string> &instruction_parts, std::
 void outputPrinting(std::ofstream &outputListing,
             std::ofstream &outputInstructions,
             std::vector<std::string> &result,
-            std::map<std::string, int> &labelAddrMap,
             std::string &comment,
             std::string &label,
+            std::string &labelCall,
             int &instruction_count,
             bool &labelSingle) {
     if (!result.empty() && result[0] == "err") {
@@ -241,6 +241,10 @@ void outputPrinting(std::ofstream &outputListing,
             }
             if (result[0] == "sw" || result[0] == "lw") {
                 outputListing << result[0] << " " << result[1] << " " << result[3] << "(" << result[2] << ") ";
+            } else if (result[0] == "j" && !labelCall.empty()) {
+                outputListing << result[0] << " " << labelCall << " ";
+            } else if (result[0] == "beq" && !labelCall.empty()) {
+                outputListing << result[0] << " " << result[2] << " " << result[1] << " " << labelCall << " ";
             } else {
                 for (const auto &s: result) {
                     outputListing << s << " ";
@@ -334,6 +338,7 @@ void secondPass(std::ifstream &fileReader,
         std::string comment;
         std::string label;
         std::vector<std::string> result = {};
+        std::string labelCall;
         if (std::regex_search(currentLine, match, regex1)) {
             comment = match.str(1);
         }
@@ -367,6 +372,7 @@ void secondPass(std::ifstream &fileReader,
                                 exit(EXIT_FAILURE);
                             }
                             result = {match.str(1), std::to_string(map_result->second / 4)};
+                            labelCall = match.str(2);
                         }
                     } else {
                         result = {match.str(1), match.str(2)};
@@ -397,6 +403,7 @@ void secondPass(std::ifstream &fileReader,
                                     match.str(2),
                                     std::to_string((map_result->second - instruction_count - 4) / 4)
                             };
+                            labelCall = match.str(4);
                         }
                     } else {
                         result = {match.str(1), match.str(2), match.str(3), match.str(4)};
@@ -406,7 +413,7 @@ void secondPass(std::ifstream &fileReader,
                 }
             }
         }
-        outputPrinting(outputListing, outputInstructions, result, labelAddrMap, comment, label, instruction_count, labelSingle);
+        outputPrinting(outputListing, outputInstructions, result, comment, label, labelCall, instruction_count, labelSingle);
     }
     symbolsOutputPrinting(outputListing, labelAddrMap);
 }
