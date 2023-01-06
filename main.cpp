@@ -210,6 +210,7 @@ uint32_t binInstruction(const std::vector<std::string> &instruction_parts, std::
 void outputPrinting(std::ofstream &outputListing,
             std::ofstream &outputInstructions,
             std::vector<std::string> &result,
+            std::map<std::string, int> &labelAddrMap,
             std::string &comment,
             std::string &label,
             int &instruction_count,
@@ -238,8 +239,12 @@ void outputPrinting(std::ofstream &outputListing,
                 outputListing << std::left << std::setw(10) << std::setfill(' ') << label << std::right;
                 outputListing << "    ";
             }
-            for (const auto &s: result) {
-                outputListing << s << " ";
+            if (result[0] == "sw" || result[0] == "lw") {
+                outputListing << result[0] << " " << result[1] << " " << result[3] << "(" << result[2] << ") ";
+            } else {
+                for (const auto &s: result) {
+                    outputListing << s << " ";
+                }
             }
             if (!comment.empty()) {
                 outputListing << "    ";
@@ -401,7 +406,7 @@ void secondPass(std::ifstream &fileReader,
                 }
             }
         }
-        outputPrinting(outputListing, outputInstructions, result, comment, label, instruction_count, labelSingle);
+        outputPrinting(outputListing, outputInstructions, result, labelAddrMap, comment, label, instruction_count, labelSingle);
     }
     symbolsOutputPrinting(outputListing, labelAddrMap);
 }
