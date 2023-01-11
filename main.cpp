@@ -111,6 +111,10 @@ uint32_t binInstruction(const std::vector<std::string> &instruction_parts, std::
         exit(EXIT_FAILURE);
     }
 
+    if(instruction_parts[0] == "exit"){
+        return ~0u;
+    }
+
     // find codes and layout for instruction
     const auto result = INSTR_CODES.find(instruction_parts[0]);
     if (result == INSTR_CODES.end()) {
