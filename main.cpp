@@ -368,7 +368,8 @@ void secondPass(std::ifstream &fileReader,
     std::regex firstMatch(R"(^\s*(\S+)\s*$)");
     std::regex secondMatch(R"(^\s*(\S+)\s+(\S+)\s*$)");
     std::regex thirdMatch(R"(^\s*(\S+)\s+(\S+),\s*(\d+)\((\S+)\)\s*$)");
-    std::regex fourthMatch(R"(^\s*(\S+)\s+(\S+),\s*(\S+),\s*(\S+)\s*$)");
+    std::regex fourthMatch(R"(^\s*(\S+)\s+(\S+),\s*(-\d+)\((\S+)\)\s*$)");
+    std::regex fifthMatch(R"(^\s*(\S+)\s+(\S+),\s*(\S+),\s*(\S+)\s*$)");
 
     while (getline(fileReader, currentLine)) {
         bool labelSingle = false;
@@ -417,7 +418,10 @@ void secondPass(std::ifstream &fileReader,
                     }
                 } else if (std::regex_search(lineWithoutComments, match, thirdMatch)) {
                     result = {match.str(1), match.str(2), match.str(4), match.str(3)};
-                } else if (std::regex_search(lineWithoutComments, match, fourthMatch)) {
+                }
+                else if (std::regex_search(lineWithoutComments, match, fourthMatch)) {
+                    result = {match.str(1), match.str(2), match.str(4), match.str(3)};
+                } else if (std::regex_search(lineWithoutComments, match, fifthMatch)) {
                     if (match.str(1) == "beq") {
                         auto converted_string = strtoi_safe(match.str(4));
 
